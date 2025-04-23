@@ -47,14 +47,44 @@ const PROTIEN_FOOD_LIST = [
 ];
 const CARBOHYDRATES_FOOD_LIST = [
   {
-    food: "Egg-Whites",
-    calorie: 17,
-    qtyInGrams: 58,
+    food: "Whole-wheat bread",
+    calorie: 81,
+    qtyInGrams: 32,
     qty: 1,
-    protien: 3.6,
-    carbohydrates: 0.2,
-    fats: 0.1,
+    protien: 4,
+    carbohydrates: 14,
+    fats: 1.1,
     allowenceQty: 10,
+  },
+  {
+    food: "Cooked White Rice",
+    calorie: 205,
+    qtyInGrams: 158,
+    qty: 1,
+    protien: 4.3,
+    carbohydrates: 45,
+    fats: 0.4,
+    allowenceQty: 2,
+  },
+  {
+    food: "Oats",
+    calorie: 153,
+    qtyInGrams: 41,
+    qty: 1,
+    protien: 5.3,
+    carbohydrates: 27,
+    fats: 2.6,
+    allowenceQty: 2,
+  },
+  {
+    food: "Red banana",
+    calorie: 52.5,
+    qtyInGrams: 59,
+    qty: 1,
+    protien: 0.7,
+    carbohydrates: 13.5,
+    fats: 0.2,
+    allowenceQty: 2,
   },
 ];
 const FATS_FOOD_LIST = [];
@@ -65,16 +95,24 @@ function totalBMRProcess(person) {
   const CALORIE_GOAL = CALORIE_AND_PROTIEN_GOAL.goalCalorie;
   //Holds the foods that is equally distributed and total calories of protien food
   const PROTIEN_DISTRIBUTION = distributeProtien(person);
-  console.log(PROTIEN_DISTRIBUTION);
   const TOTAL_PROTIEN_CALORIE = PROTIEN_DISTRIBUTION.totalProtienCalorie;
   const UTILIZED_PROTIEN_FOOD_LIST = PROTIEN_DISTRIBUTION.utilizedFoodList;
 
-  const CARBS_DISTRIBUTION = getGoalCarbsTarget(CALORIE_GOAL, person);
+  const CARBS_DISTRIBUTION = distributeCarbohydrates(CALORIE_GOAL, person);
+  const TOTAL_CARBS_CALORIE = CARBS_DISTRIBUTION.totalCarbsCalorie;
+  const UTILIZED_CARBS_FOOD_LIST = CARBS_DISTRIBUTION.utilizedFoodList;
+
   if (UTILIZED_PROTIEN_FOOD_LIST) {
     const PROTIEN_FOOD_OBJECT = groupFoodData(UTILIZED_PROTIEN_FOOD_LIST);
     createFoodParagraph(PROTIEN_FOOD_OBJECT);
   } else {
-    console.log("BASKET OVERRIDDEN");
+    console.log("PROTIEN BASKET OVERRIDDEN");
+  }
+  if (UTILIZED_CARBS_FOOD_LIST) {
+    const CARBS_FOOD_OBJECT = groupFoodData(UTILIZED_CARBS_FOOD_LIST);
+    createFoodParagraph(CARBS_FOOD_OBJECT);
+  } else {
+    console.log("CARBOHYDRATES BASKET OVERRIDDEN");
   }
 }
 
@@ -134,19 +172,6 @@ function getCalorieGoalTarget(person) {
   }
   return { goalCalorie: goalCalorie, protienTarget: protienTarget };
 }
-function getGoalCarbsTarget(calorieGoal, person) {
-  const GOAL = person.goal;
-  let carbsCalories = 0;
-  switch (GOAL) {
-    case "deficit":
-      carbsCalories = calorieGoal % 43;
-      break;
-    case "surplus":
-      carbsCalories = calorieGoal % 45;
-      break;
-  }
-  console.log(carbsCalories);
-}
 function distributeProtien(person) {
   const CAL_PROTIEN_GOAL = getCalorieGoalTarget(person);
   const CALORIE_GOAL = CAL_PROTIEN_GOAL.goalCalorie;
@@ -190,16 +215,67 @@ function distributeProtien(person) {
     totalProtienCalorie: totalProtienCalorie,
   };
 }
-// function distributeCarbohydrates(person,protienCalories) {
-//   const CAL_GOAL = getGoalCalorieTarget(person);
-//   const CALORIE_GOAL = CAL_GOAL.goalCalorie;
-//   const PROTIEN_CAL_GOAL = protienCalories;
-//   if(person.)
-// }
+function getGoalCarbsTarget(calorieGoal, person) {
+  const GOAL = person.goal;
+  let carbsCalories = 0;
+  switch (GOAL) {
+    case "deficit":
+      carbsCalories = (calorieGoal * 43) / 100;
+      break;
+    case "surplus":
+      carbsCalories = (calorieGoal * 45) / 100;
+      break;
+  }
+  return parseInt(carbsCalories);
+}
+
+function distributeCarbohydrates(calorieGoal, person) {
+  const CARBS_CALORIE_GOAL = getGoalCarbsTarget(calorieGoal, person);
+  var carbsGather = 0;
+  let carbsFoodList = [...CARBOHYDRATES_FOOD_LIST];
+  let utilizedFoodList = [];
+  let usedFoodQty = [];
+  let totalCarbsInGrams = 0;
+  while (carbsGather <= CARBS_CALORIE_GOAL) {
+    for (let i = 0; i < carbsFoodList.length; i++) {
+      let foodItem = carbsFoodList[i];
+      if (foodItem.allowenceQty == 0) {
+        if (!usedFoodQty.includes(foodItem.food)) {
+          usedFoodQty.push(foodItem.food);
+        }
+        continue;
+      }
+      carbsGather += foodItem.calorie;
+      totalCarbsInGrams += foodItem.carbohydrates;
+      foodItem.allowenceQty--;
+      utilizedFoodList.push(foodItem);
+    }
+    let allowanceOverride = false;
+    if (usedFoodQty.length == carbsFoodList.length) {
+      allowanceOverride = true;
+    } else {
+      allowanceOverride = false;
+    }
+    if (allowanceOverride) {
+      return {
+        utilizedFoodList: false,
+        message: "Carbs Basket overridden",
+        basket: usedFoodQty,
+        totalCarbsInGrams: 0,
+      };
+    }
+  }
+  return {
+    utilizedFoodList: utilizedFoodList,
+    totalCarbsInGrams: totalCarbsInGrams,
+    totalCarbsCalorie: CARBS_CALORIE_GOAL,
+  };
+}
 function groupFoodData(dataArr) {
   let groupedObject = {};
   let totalCalorie = 0;
   let totalProtien = 0;
+  let totalCarbs = 0;
   for (let i = 0; i < dataArr.length; i++) {
     let key = dataArr[i].food;
     let row = dataArr[i];
@@ -209,6 +285,7 @@ function groupFoodData(dataArr) {
       groupedObject[key].protien += row.protien;
       totalCalorie += row.calorie;
       totalProtien += row.protien;
+      totalCarbs += row.carbohydrates;
     } else {
       groupedObject[key] = {
         qty: row.qty,
@@ -220,11 +297,13 @@ function groupFoodData(dataArr) {
       };
       totalCalorie += row.calorie;
       totalProtien += row.protien;
+      totalCarbs += row.carbohydrates;
     }
   }
   groupedObject.totalNutrition = {
     totalCalorie: totalCalorie,
     totalProtien: totalProtien,
+    totalCarbs: totalCarbs,
   };
   return groupedObject;
 }
@@ -240,7 +319,9 @@ function createFoodParagraph(dataObject) {
   let totalNutrition = dataObject.totalNutrition;
   paragraph += `Total nutrition\n 1.Calorie : ${parseInt(
     totalNutrition.totalCalorie
-  )}\n 2.Protien : ${parseInt(totalNutrition.totalProtien)}`;
+  )}\n 2.Protien : ${parseInt(
+    totalNutrition.totalProtien
+  )}\n 3.Carbohydrates : ${parseInt(totalNutrition.totalCarbs)}`;
   console.log(paragraph);
 }
 
